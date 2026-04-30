@@ -1,0 +1,97 @@
+name: CI – Lint, Build & Docker
+
+on:
+  push:
+    branches:
+      - develop
+      - "feature/**"
+  pull_request:
+    branches:
+      - develop
+
+# ─────────────────────────────────────────────────────────────────
+# JOB 1 – Code Quality  (HTMLHint + Stylelint)
+# ─────────────────────────────────────────────────────────────────
+jobs:
+  code-quality:
+    name: "Job 1 – HTML & CSS Linting"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Step 1 – Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Set up Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: "Install Dependencies"
+        run: npm install
+
+      - name: "Step 2 – HTMLHint (Lint all HTML files)"
+        run: npm run lint:html
+
+      - name: "Step 3 – Stylelint (Lint CSS)"
+        run: npm run lint:css
+
+# ─────────────────────────────────────────────────────────────────
+# JOB 2 – Build  (Parcel static site build)
+# ─────────────────────────────────────────────────────────────────
+  build-website:
+    name: "Job 2 – Build Website (Parcel)"
+    runs-on: ubuntu-latest
+    needs: code-quality          # only runs if Job 1 passes
+
+    steps:
+      - name: "Step 1 – Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Set up Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: "Install Dependencies"
+        run: npm install
+
+      - name: "Step 4 – Build Website using Parcel"
+        run: npm run build
+
+      - name: "Upload dist artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────
+# JOB 3 – Docker  (Build image & push to Docker Hub)
+# ─────────────────────────────────────────────────────────────────
+  docker-publish:
+    name: "Job 3 – Docker Build & Push"
+    runs-on: ubuntu-latest
+    needs: build-website         # only runs if Job 2 passes
+
+    steps:
+      - name: "Step 1 – Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Step 5 – Log in to Docker Hub"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: "Step 5 – Build Docker Image using Dockerfile"
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/uni-notice-board:latest \
+                       -t ${{ secrets.DOCKERHUB_USERNAME }}/uni-notice-board:${{ github.sha }} \
+                       .
+
+      - name: "Step 6 – Push Docker Image to Docker Hub"
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/uni-notice-board:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/uni-notice-board:${{ github.sha }}

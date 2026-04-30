@@ -1,0 +1,16 @@
+{
+  "name": "uni-notice-board",
+  "version": "1.0.0",
+  "description": "University Digital Notice Board - COMSATS Lahore",
+  "scripts": {
+    "build": "parcel build src/index.html src/notices.html src/exams.html src/admissions.html src/contact.html --dist-dir dist --no-optimize",
+    "lint:html": "htmlhint src/*.html",
+    "lint:css": "stylelint styles/*.css"
+  },
+  "devDependencies": {
+    "htmlhint": "^1.1.4",
+    "stylelint": "^15.11.0",
+    "stylelint-config-standard": "^34.0.0",
+    "parcel": "^2.12.0"
+  }
+}
